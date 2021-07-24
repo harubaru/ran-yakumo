@@ -1,14 +1,17 @@
+from discord import channel
 import parse
 import discord
 from util import Util
 from pipeline import TranslationPipeline
+from pipeline import DanbooruPipeline
 
 class Client():
     def __init__(self, util, keys=None):
         self.util = util
         self.client = discord.Client()
         self.token = keys["discord_token"]
-        self.pipeline = TranslationPipeline(self.util, keys)
+        self.tl_pipeline = TranslationPipeline(self.util, keys)
+        self.db_pipeline = DanbooruPipeline(self.util, keys)
 
     def log(self, message):
         if self.util is not None:
@@ -28,9 +31,18 @@ class Client():
         if not message.content.startswith('r!'):
             return
         
-        # parse message
-        msg = parse.parse('r!tl {0} {1} {2}', message.content)
-        from_lang = msg[0]
-        to_lang = msg[1]
-        text = msg[2]
-        await message.channel.send(self.pipeline.generate(text, from_lang, to_lang))
+        # translation
+        if message.content.startswith('r!t'):
+            msg = parse.parse('r!tl {0} {1} {2}', message.content)
+            from_lang = msg[0]
+            to_lang = msg[1]
+            text = msg[2]
+            await message.channel.send(self.tl_pipeline.generate(text, from_lang, to_lang))
+        
+        # danbooru
+        if message.content.startswith('r!d'):
+            msg = parse.parse('r!d {0}', message.content)
+            if message.channel.is_nsfw():
+                await message.channel.send(self.db_pipeline.generate(msg[0], True))
+            else:
+                await message.channel.send(self.db_pipeline.generate(msg[0], False))
