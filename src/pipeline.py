@@ -71,8 +71,8 @@ class DanbooruPipeline(Pipeline):
 
     def __init__(self, util=None, keys=None):
         super().__init__(util, keys)
-        self.nsfw_client = Danbooru('danbooru', api_key=keys["danbooru_token"])
-        self.sfw_client = Danbooru('safebooru', api_key=keys["danbooru_token"])
+        self.nsfw_client = Danbooru('danbooru', username=keys["danbooru_username"], api_key=keys["danbooru_token"])
+        self.sfw_client = Danbooru('safebooru', username=keys["danbooru_username"], api_key=keys["danbooru_token"])
         self.log("Pipeline Initialized.")
 
     def generate(self, message, nsfw=False):

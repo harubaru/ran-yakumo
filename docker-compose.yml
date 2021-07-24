@@ -12,4 +12,4 @@ services:
 
 secrets:
     secrets_file:
-        file: ./secrets
+        file: ./secrets.json
