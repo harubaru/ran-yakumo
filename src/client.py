@@ -2,8 +2,12 @@ from discord import channel
 import parse
 import discord
 from util import Util
+
+# Import the pipelines
 from pipeline import TranslationPipeline
 from pipeline import DanbooruPipeline
+from pipeline import YoutubePipeline
+from pipeline import WikipediaPipeline
 
 class Client():
     def __init__(self, util, keys=None):
@@ -12,10 +16,12 @@ class Client():
         self.token = keys["discord_token"]
         self.tl_pipeline = TranslationPipeline(self.util, keys)
         self.db_pipeline = DanbooruPipeline(self.util, keys)
+        self.yt_pipeline = YoutubePipeline(self.util, keys)
+        self.wiki_pipeline = WikipediaPipeline(self.util, keys)
 
     def log(self, message):
         if self.util is not None:
-            self.util.log('client', message)
+            self.util.log(self.__class__.__name__, message)
     
     def run(self):
         self.log('Starting Discord Client')
@@ -46,3 +52,11 @@ class Client():
                 await message.channel.send(self.db_pipeline.generate(msg[0], True))
             else:
                 await message.channel.send(self.db_pipeline.generate(msg[0], False))
+        
+        if message.content.startswith('r!yt'):
+            msg = parse.parse('r!yt {0}', message.content)
+            await message.channel.send(self.yt_pipeline.generate(msg[0]))
+
+        if message.content.startswith('r!wiki'):
+            msg = parse.parse('r!wiki {0}', message.content)
+            await message.channel.send(self.wiki_pipeline.generate(msg[0]))

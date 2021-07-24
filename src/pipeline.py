@@ -13,15 +13,55 @@ class Pipeline():
     def generate(self, message):
         return message
 
+import wikipedia
+from youtube_search import YoutubeSearch
+from gpt3search import SearchService
+
 class WikipediaPipeline(Pipeline):
     def __init__(self, util=None, keys=None):
         super().__init__(util, keys)
         self.log("Pipeline Initialized.")
+    
+    def generate(self, message):
+        if not message:
+            return "Please specify a search term."
+        
+        try:
+            result_terms = wikipedia.search(message, results='5')
+        except wikipedia.exceptions.DisambiguationError as e:
+            result_terms = e.options
+            result_terms.pop(0)
+        
+        if not result_terms:
+            return "No results found."
+        
+        try:
+            article = wikipedia.page(title=result_terms[0], auto_suggest=False)
+            return article.url
+        except wikipedia.exceptions.PageError:
+            return "No results found."
 
 class YoutubePipeline(Pipeline):
     def __init__(self, util=None, keys=None):
         super().__init__(util, keys)
+        self.service = SearchService(api_key=keys["openai_token"])
         self.log("Pipeline Initialized.")
+
+    def generate(self, message):
+        if not message:
+            return "Please specify a search term."
+        
+        results = YoutubeSearch(message, max_results=8)
+        if not results:
+            return 'Could not find YouTube video.'
+        
+        search_query = []
+        for i in results.videos:
+            search_query.append(i['title'])
+        
+        selection = self.service.classify_sequence(message, search_query)
+        return 'https://www.youtube.com' + results.videos[selection]['url_suffix']
+
 
 
 from pybooru import Danbooru
@@ -37,7 +77,7 @@ class DanbooruPipeline(Pipeline):
 
     def generate(self, message, nsfw=False):
         if not message:
-            return None
+            return "Please specify a search term."
         
         if nsfw:
             output = self.nsfw_client.post_list(tags=message, limit=1, random=True)
@@ -84,7 +124,6 @@ class TranslationPipeline(Pipeline):
     
     def generate(self, message, from_lang, to_lang):
         # log from language and to language
-        self.log('{} -> {}'.format(from_lang, to_lang))
         
         if from_lang not in self.tl_configurations:
             return "Invalid language code."

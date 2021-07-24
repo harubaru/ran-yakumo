@@ -1,5 +1,7 @@
 discord.py==1.7.3
 openai==0.10.1
 pybooru
+wikipedia
+youtube_search
 argparse
 parse
