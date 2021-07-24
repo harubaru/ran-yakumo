@@ -62,8 +62,6 @@ class YoutubePipeline(Pipeline):
         selection = self.service.classify_sequence(message, search_query)
         return 'https://www.youtube.com' + results.videos[selection]['url_suffix']
 
-
-
 from pybooru import Danbooru
 
 # Message pipeline for Danbooru images.
@@ -93,6 +91,21 @@ class DanbooruPipeline(Pipeline):
 
 
 from gpt3 import GPT3GeneratorService
+
+# Q&A Pipeline
+class QnAPipeline(Pipeline):
+    def __init__(self, util=None, keys=None):
+        super().__init__(util, keys)
+        self.model = GPT3GeneratorService(generate_num=60, temperature=0.0, repetition_penalty=0.0, model_name='davinci', api_key=keys["openai_token"])
+        self.log("Pipeline Initialized.")
+
+        self.prompt = "I am a highly intelligent youkai from the Touhou Project named Ran Yakumo. My answers will always be truthful.\n\nQ: {question}\nA:"
+    
+    def generate(self, message):
+        prompt_formatted = self.prompt.format(question=message)
+        prompt_formatted = prompt_formatted[0:400] # 400 character limit
+        response = self.model.sample_sequence_raw(prompt_formatted)
+        return response
 
 # Message pipeline for translation tasks.
 class TranslationPipeline(Pipeline):
@@ -124,13 +137,14 @@ class TranslationPipeline(Pipeline):
     
     def generate(self, message, from_lang, to_lang):
         # log from language and to language
-        
+
         if from_lang not in self.tl_configurations:
             return "Invalid language code."
         if to_lang not in self.tl_configurations:
             return "Invalid language code."
         
         prompt_formatted = self.prompt.format(from_lang=self.tl_configurations[from_lang], to_lang=self.tl_configurations[to_lang], message=message)
+        prompt_formatted = prompt_formatted[0:400] # 400 character limit
         response = self.model.sample_sequence_raw(prompt_formatted)
 
         return response

@@ -5,6 +5,7 @@ from util import Util
 
 # Import the pipelines
 from pipeline import TranslationPipeline
+from pipeline import QnAPipeline
 from pipeline import DanbooruPipeline
 from pipeline import YoutubePipeline
 from pipeline import WikipediaPipeline
@@ -15,6 +16,7 @@ class Client():
         self.client = discord.Client()
         self.token = keys["discord_token"]
         self.tl_pipeline = TranslationPipeline(self.util, keys)
+        self.qna_pipeline = QnAPipeline(self.util, keys)
         self.db_pipeline = DanbooruPipeline(self.util, keys)
         self.yt_pipeline = YoutubePipeline(self.util, keys)
         self.wiki_pipeline = WikipediaPipeline(self.util, keys)
@@ -60,3 +62,7 @@ class Client():
         if message.content.startswith('r!wiki'):
             msg = parse.parse('r!wiki {0}', message.content)
             await message.channel.send(self.wiki_pipeline.generate(msg[0]))
+        
+        if message.content.startswith('r!q'):
+            msg = parse.parse('r!q {0}', message.content)
+            await message.channel.send(self.qna_pipeline.generate(msg[0]))
