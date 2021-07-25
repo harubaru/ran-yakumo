@@ -83,7 +83,8 @@ class AsyncRateLimiter(RateLimiter):
 
     async def pop_call(self):
         async with self._alock:
-            return self.calls.pop()
+            if self.calls:
+                return self.calls.pop()
 
     async def __aenter__(self):
         if self._alock is None:

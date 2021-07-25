@@ -1,9 +1,12 @@
-from discord import channel
 import time
 import parse
 import discord
+
 from ratelimiter import AsyncRateLimiter
 from util import Util
+from discord import Embed
+from discord import Colour
+from discord import channel
 
 # Import the pipelines
 from pipeline import TranslationPipeline
@@ -26,7 +29,7 @@ class Client():
         self.until = None
         self.rate_limited = False
         # Limit generation to 6 messages per minute.
-        self.rate_limiter = AsyncRateLimiter(max_calls=2, period=10, callback=self.limited)
+        self.rate_limiter = AsyncRateLimiter(max_calls=3, period=5, callback=self.limited)
 
     def log(self, message):
         if self.util is not None:
@@ -69,6 +72,24 @@ class Client():
             else:
                 await self.message_handler(message)
     
+    async def send_embed(self, title, message, channel):
+        embed = discord.Embed(title=title, description=message, colour=0xf1ab37)
+        await channel.send(embed=embed)
+
+    async def help(self, message):
+        command_dict = {
+            'tl': 'Translate text from one language to another.\nUsage: ``r!tl [from] [to] [text]``',
+            'd': 'Danbooru search.\nUsage: ``r!d [tags]``',
+            'yt': 'Search YouTube for videos.\nUsage: ``r!yt [search]``',
+            'wiki': 'Search Wikipedia for a page.\nUsage: ``r!wiki [search]``',
+            'q': 'Ask a question.\nUsage: ``r!q [question]``',
+        }
+        msg = "**Ran Yakumo Bot**\nVersion: ``0.1.0``\nGithub repo: [**Come contribute!**](https://github.com/harubaru/ran-yakumo)\n\nCommands:"
+        for key, value in command_dict.items():
+            msg += '\n**{0}** - {1}\n'.format(key, value)
+        
+        await self.send_embed(title='Help', message=msg, channel=message.channel)
+        
     async def message_handler(self, message):
         if message.content.startswith('r!t'):
             msg = parse.parse('r!tl {0} {1} {2}', message.content.replace('\n', ''))
@@ -79,6 +100,7 @@ class Client():
         
         # danbooru
         if message.content.startswith('r!d'):
+            await self.rate_limiter.pop_call()
             msg = parse.parse('r!d {0}', message.content.replace('\n', ''))
             if message.channel.is_nsfw():
                 await message.channel.send(self.db_pipeline.generate(msg[0], True))
@@ -90,9 +112,14 @@ class Client():
             await message.channel.send(self.yt_pipeline.generate(msg[0]))
 
         if message.content.startswith('r!wiki'):
+            await self.rate_limiter.pop_call()
             msg = parse.parse('r!wiki {0}', message.content)
             await message.channel.send(self.wiki_pipeline.generate(msg[0]))
         
         if message.content.startswith('r!q'):
             msg = parse.parse('r!q {0}', message.content.replace('\n', ''))
             await message.channel.send(self.qna_pipeline.generate(msg[0]))
+        
+        if message.content.startswith('r!help'):
+            await self.rate_limiter.pop_call()
+            await self.help(message)
