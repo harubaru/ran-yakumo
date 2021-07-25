@@ -96,15 +96,19 @@ from gpt3 import GPT3GeneratorService
 class QnAPipeline(Pipeline):
     def __init__(self, util=None, keys=None):
         super().__init__(util, keys)
-        self.model = GPT3GeneratorService(generate_num=60, temperature=0.0, repetition_penalty=0.0, model_name='davinci', api_key=keys["openai_token"])
+        self.model = GPT3GeneratorService(generate_num=60, temperature=0.5, repetition_penalty=0.5, model_name='davinci', api_key=keys["openai_token"])
         self.log("Pipeline Initialized.")
 
-        self.prompt = "I am a highly intelligent youkai from the Touhou Project named Ran Yakumo. My answers will always be truthful.\n\nQ: {question}\nA:"
+        self.prompt = "I am a highly intelligent youkai from the Touhou Project named Ran Yakumo. My answers will always be truthful.\n\nQ: How does a telescope work?\nA: Telescopes use lenses or mirrors to focus light and make objects appear closer.\n\nQ: {question}\nA:"
     
     def generate(self, message):
         prompt_formatted = self.prompt.format(question=message)
         prompt_formatted = prompt_formatted[0:400] # 400 character limit
         response = self.model.sample_sequence_raw(prompt_formatted)
+        
+        if response == '':
+            response = 'Unknown'
+        
         return response
 
 # Message pipeline for translation tasks.
@@ -146,5 +150,8 @@ class TranslationPipeline(Pipeline):
         prompt_formatted = self.prompt.format(from_lang=self.tl_configurations[from_lang], to_lang=self.tl_configurations[to_lang], message=message)
         prompt_formatted = prompt_formatted[0:400] # 400 character limit
         response = self.model.sample_sequence_raw(prompt_formatted)
+
+        if response == '':
+            response = 'Unable to translate.'
 
         return response
