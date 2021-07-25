@@ -81,6 +81,10 @@ class AsyncRateLimiter(RateLimiter):
             if self._alock is None:
                 self._alock = asyncio.Lock()
 
+    async def pop_call(self):
+        async with self._alock:
+            return self.calls.pop()
+
     async def __aenter__(self):
         if self._alock is None:
             self._init_async_lock()

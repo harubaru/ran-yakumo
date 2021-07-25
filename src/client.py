@@ -26,7 +26,7 @@ class Client():
         self.until = None
         self.rate_limited = False
         # Limit generation to 6 messages per minute.
-        self.rate_limiter = AsyncRateLimiter(max_calls=1, period=10, callback=self.limited)
+        self.rate_limiter = AsyncRateLimiter(max_calls=2, period=10, callback=self.limited)
 
     def log(self, message):
         if self.util is not None:
@@ -56,39 +56,43 @@ class Client():
         
         # Check if rate limited, if so, return
         if self.until != None:
-            if (self.until - time.time()) < 0:
-                self.rate_limited = False
-            else:
+            if self.until > time.time():
+                duration = int(round(self.until - time.time()))
+                await message.channel.send('Please wait for {0} seconds to use this command again.'.format(duration))
                 return
+        
+        async with self.rate_limiter:
+            if self.rate_limited:
+                self.rate_limited = False
+                await self.rate_limiter.pop_call()
+                return
+            else:
+                await self.message_handler(message)
+    
+    async def message_handler(self, message):
+        if message.content.startswith('r!t'):
+            msg = parse.parse('r!tl {0} {1} {2}', message.content.replace('\n', ''))
+            from_lang = msg[0]
+            to_lang = msg[1]
+            text = msg[2]
+            await message.channel.send(self.tl_pipeline.generate(text, from_lang, to_lang))
+        
+        # danbooru
+        if message.content.startswith('r!d'):
+            msg = parse.parse('r!d {0}', message.content.replace('\n', ''))
+            if message.channel.is_nsfw():
+                await message.channel.send(self.db_pipeline.generate(msg[0], True))
+            else:
+                await message.channel.send(self.db_pipeline.generate(msg[0], False))
+        
+        if message.content.startswith('r!yt'):
+            msg = parse.parse('r!yt {0}', message.content)
+            await message.channel.send(self.yt_pipeline.generate(msg[0]))
 
-        if not self.rate_limited:
-            async with self.rate_limiter:
-                # translation
-                if self.rate_limited:
-                    return
-                if message.content.startswith('r!t'):
-                    msg = parse.parse('r!tl {0} {1} {2}', message.content.replace('\n', ''))
-                    from_lang = msg[0]
-                    to_lang = msg[1]
-                    text = msg[2]
-                    await message.channel.send(self.tl_pipeline.generate(text, from_lang, to_lang))
-                
-                # danbooru
-                if message.content.startswith('r!d'):
-                    msg = parse.parse('r!d {0}', message.content.replace('\n', ''))
-                    if message.channel.is_nsfw():
-                        await message.channel.send(self.db_pipeline.generate(msg[0], True))
-                    else:
-                        await message.channel.send(self.db_pipeline.generate(msg[0], False))
-                
-                if message.content.startswith('r!yt'):
-                    msg = parse.parse('r!yt {0}', message.content)
-                    await message.channel.send(self.yt_pipeline.generate(msg[0]))
-
-                if message.content.startswith('r!wiki'):
-                    msg = parse.parse('r!wiki {0}', message.content)
-                    await message.channel.send(self.wiki_pipeline.generate(msg[0]))
-                
-                if message.content.startswith('r!q'):
-                    msg = parse.parse('r!q {0}', message.content.replace('\n', ''))
-                    await message.channel.send(self.qna_pipeline.generate(msg[0]))
+        if message.content.startswith('r!wiki'):
+            msg = parse.parse('r!wiki {0}', message.content)
+            await message.channel.send(self.wiki_pipeline.generate(msg[0]))
+        
+        if message.content.startswith('r!q'):
+            msg = parse.parse('r!q {0}', message.content.replace('\n', ''))
+            await message.channel.send(self.qna_pipeline.generate(msg[0]))
