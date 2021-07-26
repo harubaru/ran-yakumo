@@ -1,7 +1,5 @@
 ![logo](banner.png)
 
-[**Invite Link**](https://discord.com/api/oauth2/authorize?client_id=822511630419755079&permissions=0&scope=bot)
-
 ## Overview
 Ran Yakumo is a general information utility bot powered by GPT-3!
 
@@ -10,7 +8,6 @@ Ran Yakumo is a general information utility bot powered by GPT-3!
 - **Danbooru Search** : Able to fetch images from Danbooru.
 - **Wikipedia Search** : Uses Wikipedia's search API to fetch wikipedia articles based on a search query.
 - **YouTube Search** : Uses GPT-3 to classify similarity between search query and video title.
-- **Trivia Q&A** : Returns an answer for a question. This can be helpful in doing quick information gathering without going to Google.
 - **Rate Limiting** : Messages are rate limited to 1 message per 10 seconds, or 6 messages per minute. This is to help reduce API costs and spam.
 
 ### Setup
