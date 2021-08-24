@@ -123,6 +123,7 @@ class TranslationPipeline(Pipeline):
             'en': 'English',
             'es': 'Spanish',
             'br': 'Brazilian',
+            'pt': 'Portuguese',
             'fr': 'French',
             'it': 'Italian',
             'de': 'German',
