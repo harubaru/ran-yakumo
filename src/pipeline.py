@@ -85,7 +85,7 @@ class DanbooruPipeline(Pipeline):
             return 'Post not found.'
         
         try:
-            return output[0]['file_url']
+            return output['file_url']
         except:
             return 'Post not found.'
 
