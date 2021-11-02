@@ -101,11 +101,10 @@ class Client():
         # danbooru
         if message.content.startswith('r!d'):
             await self.rate_limiter.pop_call()
-            msg = parse.parse('r!d {0}', message.content.replace('\n', ''))
-            if message.channel.is_nsfw():
-                await message.channel.send(self.db_pipeline.generate(msg[0], True))
-            else:
-                await message.channel.send(self.db_pipeline.generate(msg[0], False))
+            print(message.content)
+            msg = parse.parse('r!d {0}', message.content.replace('\n', '').replace('\\', ''))
+            print(msg)
+            await message.channel.send(self.db_pipeline.generate(msg[0], message.channel.is_nsfw()))
         
         if message.content.startswith('r!yt'):
             msg = parse.parse('r!yt {0}', message.content)
@@ -117,8 +116,7 @@ class Client():
             await message.channel.send(self.wiki_pipeline.generate(msg[0]))
         
         if message.content.startswith('r!q'):
-            msg = parse.parse('r!q {0}', message.content.replace('\n', ''))
-            await message.channel.send(self.qna_pipeline.generate(msg[0]))
+            await message.channel.send("This has been disabled.")
         
         if message.content.startswith('r!help'):
             await self.rate_limiter.pop_call()

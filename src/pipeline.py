@@ -83,11 +83,14 @@ class DanbooruPipeline(Pipeline):
             output = self.sfw_client.post_list(tags=message, limit=1, random=True)
         if not output:
             return 'Post not found.'
-        
+
         try:
-            return output[0]['file_url']
+            return output['file_url']
         except:
-            return 'Post not found.'
+            try:
+                return output[0]['file_url']
+            except:
+                return 'Post not found.'
 
 
 from gpt3 import GPT3GeneratorService
