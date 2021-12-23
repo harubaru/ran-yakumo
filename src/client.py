@@ -11,6 +11,7 @@ from discord import channel
 # Import the pipelines
 from pipeline import TranslationPipeline
 from pipeline import QnAPipeline
+from pipeline import DictionaryPipeline
 from pipeline import DanbooruPipeline
 from pipeline import YoutubePipeline
 from pipeline import WikipediaPipeline
@@ -22,6 +23,7 @@ class Client():
         self.token = keys["discord_token"]
         self.tl_pipeline = TranslationPipeline(self.util, keys)
         self.qna_pipeline = QnAPipeline(self.util, keys)
+        self.dict_pipeline = DictionaryPipeline(self.util, keys)
         self.db_pipeline = DanbooruPipeline(self.util, keys)
         self.yt_pipeline = YoutubePipeline(self.util, keys)
         self.wiki_pipeline = WikipediaPipeline(self.util, keys)
@@ -72,23 +74,24 @@ class Client():
             else:
                 await self.message_handler(message)
     
-    async def send_embed(self, title, message, channel):
+    async def send_embed(self, title, message, messageobj):
         embed = discord.Embed(title=title, description=message, colour=0xf1ab37)
-        await channel.send(embed=embed)
+        await messageobj.reply(embed=embed)
 
     async def help(self, message):
         command_dict = {
             'tl': 'Translate text from one language to another.\nUsage: ``r!tl [from] [to] [text]``',
-            'd': 'Danbooru search.\nUsage: ``r!d [tags]``',
+            'dan': 'Danbooru search.\nUsage: ``r!dan [tags]``',
             'yt': 'Search YouTube for videos.\nUsage: ``r!yt [search]``',
             'wiki': 'Search Wikipedia for a page.\nUsage: ``r!wiki [search]``',
             'q': 'Ask a question.\nUsage: ``r!q [question]``',
+            'def': 'Look up a word in the dictionary.\nUsage: ``r!def [word]``',
         }
-        msg = "**Ran Yakumo Bot**\nVersion: ``0.1.0``\nGithub repo: [**Come contribute!**](https://github.com/harubaru/ran-yakumo)\n\nCommands:"
+        msg = "**Ran Yakumo Bot**\nVersion: ``0.1.1``\nGithub repo: [**Come contribute!**](https://github.com/harubaru/ran-yakumo)\n\nCommands:"
         for key, value in command_dict.items():
             msg += '\n**{0}** - {1}\n'.format(key, value)
         
-        await self.send_embed(title='Help', message=msg, channel=message.channel)
+        await self.send_embed(title='Help', message=msg, messageobj=message)
         
     async def message_handler(self, message):
         if message.content.startswith('r!t'):
@@ -96,28 +99,31 @@ class Client():
             from_lang = msg[0]
             to_lang = msg[1]
             text = msg[2]
-            await message.channel.send(self.tl_pipeline.generate(text, from_lang, to_lang))
+            await message.reply(self.tl_pipeline.generate(text, from_lang, to_lang))
         
         # danbooru
-        if message.content.startswith('r!d'):
+        if message.content.startswith('r!dan'):
             await self.rate_limiter.pop_call()
-            print(message.content)
-            msg = parse.parse('r!d {0}', message.content.replace('\n', '').replace('\\', ''))
-            print(msg)
-            await message.channel.send(self.db_pipeline.generate(msg[0], message.channel.is_nsfw()))
+            msg = parse.parse('r!dan {0}', message.content.replace('\n', ''))
+            await message.reply(embed=self.db_pipeline.generate(msg[0], message.channel.is_nsfw(), message.author))
         
         if message.content.startswith('r!yt'):
             msg = parse.parse('r!yt {0}', message.content)
-            await message.channel.send(self.yt_pipeline.generate(msg[0]))
+            await message.reply(self.yt_pipeline.generate(msg[0]))
 
         if message.content.startswith('r!wiki'):
             await self.rate_limiter.pop_call()
             msg = parse.parse('r!wiki {0}', message.content)
-            await message.channel.send(self.wiki_pipeline.generate(msg[0]))
+            await message.reply(self.wiki_pipeline.generate(msg[0]))
         
         if message.content.startswith('r!q'):
-            await message.channel.send("This has been disabled.")
+            msg = parse.parse('r!q {0}', message.content)
+            await message.reply(embed=self.qna_pipeline.generate(msg[0], message.author))
         
+        if message.content.startswith('r!def'):
+            msg = parse.parse('r!def {0}', message.content)
+            await message.reply(embed=self.dict_pipeline.generate(msg[0], message.author))
+
         if message.content.startswith('r!help'):
             await self.rate_limiter.pop_call()
             await self.help(message)

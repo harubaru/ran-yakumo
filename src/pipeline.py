@@ -1,6 +1,10 @@
 # Discord message pipeline
 # Takes in message, parses it, and returns response.
 
+import discord
+
+embed_color = discord.Colour.from_rgb(215,195,134)
+
 class Pipeline():
     def __init__(self, util=None, keys=None):
         self.util = util
@@ -64,6 +68,7 @@ class YoutubePipeline(Pipeline):
 
 from pybooru import Danbooru
 
+# returns an embed
 # Message pipeline for Danbooru images.
 class DanbooruPipeline(Pipeline):
 
@@ -73,46 +78,83 @@ class DanbooruPipeline(Pipeline):
         self.sfw_client = Danbooru('safebooru', username=keys["danbooru_username"], api_key=keys["danbooru_token"])
         self.log("Pipeline Initialized.")
 
-    def generate(self, message, nsfw=False):
+    def generate(self, message, nsfw, author):
+        embed = discord.Embed()
+        embed.set_footer(text=author.name + '#' + author.discriminator, icon_url=author.avatar_url)
+        embed.colour = embed_color
+
         if not message:
-            return "Please specify a search term."
+            embed.title = 'Error'
+            embed.description = 'Please input a search term!'
+            return embed
         
         if nsfw:
             output = self.nsfw_client.post_list(tags=message, limit=1, random=True)
         else:
             output = self.sfw_client.post_list(tags=message, limit=1, random=True)
         if not output:
-            return 'Post not found.'
+            embed.title = 'Error'
+            embed.description = 'Post not found.'
+            return embed
+        
+        embed.title = message
 
         try:
-            return output['file_url']
+            embed.set_image(url=output['file_url'])
+            embed.url = output['file_url']
+            return embed
         except:
             try:
-                return output[0]['file_url']
+                embed.set_image(url=output[0]['file_url'])
+                embed.url = output[0]['file_url']
+                return embed
             except:
-                return 'Post not found.'
+                embed.title = 'Error'
+                embed.description = 'Post not found.'
+                return embed
 
 
+from gptj import GPTJGeneratorService
 from gpt3 import GPT3GeneratorService
 
 # Q&A Pipeline
 class QnAPipeline(Pipeline):
     def __init__(self, util=None, keys=None):
         super().__init__(util, keys)
-        self.model = GPT3GeneratorService(generate_num=60, temperature=0.5, repetition_penalty=0.5, model_name='davinci', api_key=keys["openai_token"])
+        self.model = GPTJGeneratorService(ip=keys["sukima_ip"], username=keys["sukima_username"], password=keys["sukima_password"])
         self.log("Pipeline Initialized.")
-
-        self.prompt = "I am a highly intelligent youkai from the Touhou Project named Ran Yakumo. My answers will always be truthful.\n\nQ: How does a telescope work?\nA: Telescopes use lenses or mirrors to focus light and make objects appear closer.\n\nQ: {question}\nA:"
+        self.prompt = "{author}: How does a telescope work?\nRan Yakumo: Telescopes use lenses or mirrors to focus light and make objects appear closer.\n{author}: {question}\nRan Yakumo:"
     
-    def generate(self, message):
-        prompt_formatted = self.prompt.format(question=message)
+    def generate(self, message, author):
+        embed = discord.Embed()
+        embed.set_footer(text=author.name + '#' + author.discriminator, icon_url=author.avatar_url)
+        embed.colour = embed_color
+
+        prompt_formatted = self.prompt.format(question=message, author=author.name)
         prompt_formatted = prompt_formatted[0:400] # 400 character limit
         response = self.model.sample_sequence_raw(prompt_formatted)
+        embed.description = response
         
-        if response == '':
-            response = 'Unknown'
-        
-        return response
+        return embed
+
+# Dictionary Pipeline
+class DictionaryPipeline(Pipeline):
+    def __init__(self, util=None, keys=None):
+        super().__init__(util, keys)
+        self.log("Pipeline Initialized.")
+        self.model = GPTJGeneratorService(ip=keys["sukima_ip"], username=keys["sukima_username"], password=keys["sukima_password"])
+        self.prompt = "world - the earth, together with all of its countries, peoples, and natural features.\nbrain - an organ of soft nervous tissue having a grayish-white surface and a number of minute blood vessels, functioning as the center of the nervous system.\nlinker (programming) - a program that links the source code of a software program into a single executable file.\nintracranial hemorrhaging - the process of bleeding within the brain.\npresident - a person who presides over an organization, usually with the title of chairman.\nsenator - a person who is elected to represent a state in the U.S. Senate.\nvirtual machine - a computer program that emulates the behavior of a real machine.\nhole - a small opening or cavity.\n{term} -"
+
+    def generate(self, message, author):
+        embed = discord.Embed()
+        embed.set_footer(text=author.name + '#' + author.discriminator, icon_url=author.avatar_url)
+        embed.colour = embed_color
+
+        prompt_formatted = self.prompt.format(term=message)
+        response = self.model.sample_sequence_raw(prompt_formatted)
+        embed.description = response
+
+        return embed
 
 # Message pipeline for translation tasks.
 class TranslationPipeline(Pipeline):
