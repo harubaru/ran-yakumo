@@ -14,14 +14,14 @@ class Sukima_API():
         headers = None
         if auth:
             headers = {'Authorization': f'Bearer {auth}'}
-        r = requests.post(url=url, data=data, headers=headers)
+        r = requests.post(url=url, data=data, headers=headers, timeout=5.0)
         return r
     
     def get(self, url, auth = None):
         headers = None
         if auth:
             headers = {'Authorization': f'Bearer {auth}'}
-        r = requests.get(url=url, headers=headers)
+        r = requests.get(url=url, headers=headers, timeout=5.0)
         return r
     
     def healthcheck(self):

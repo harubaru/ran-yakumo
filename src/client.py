@@ -94,36 +94,43 @@ class Client():
         await self.send_embed(title='Help', message=msg, messageobj=message)
         
     async def message_handler(self, message):
-        if message.content.startswith('r!t'):
-            msg = parse.parse('r!tl {0} {1} {2}', message.content.replace('\n', ''))
-            from_lang = msg[0]
-            to_lang = msg[1]
-            text = msg[2]
-            await message.reply(self.tl_pipeline.generate(text, from_lang, to_lang))
-        
-        # danbooru
-        if message.content.startswith('r!dan'):
-            await self.rate_limiter.pop_call()
-            msg = parse.parse('r!dan {0}', message.content.replace('\n', ''))
-            await message.reply(embed=self.db_pipeline.generate(msg[0], message.channel.is_nsfw(), message.author))
-        
-        if message.content.startswith('r!yt'):
-            msg = parse.parse('r!yt {0}', message.content)
-            await message.reply(self.yt_pipeline.generate(msg[0]))
+        async with message.channel.typing():
+            try:
+                if message.content.startswith('r!t'):
+                    msg = parse.parse('r!tl {0} {1} {2}', message.content.replace('\n', ''))
+                    from_lang = msg[0]
+                    to_lang = msg[1]
+                    text = msg[2]
+                    await message.reply(self.tl_pipeline.generate(text, from_lang, to_lang))
+                
+                # danbooru
+                if message.content.startswith('r!dan'):
+                    await self.rate_limiter.pop_call()
+                    msg = parse.parse('r!dan {0}', message.content.replace('\n', ''))
+                    await message.reply(embed=self.db_pipeline.generate(msg[0], message.channel.is_nsfw(), message.author))
+                
+                if message.content.startswith('r!yt'):
+                    msg = parse.parse('r!yt {0}', message.content)
+                    await message.reply(self.yt_pipeline.generate(msg[0]))
 
-        if message.content.startswith('r!wiki'):
-            await self.rate_limiter.pop_call()
-            msg = parse.parse('r!wiki {0}', message.content)
-            await message.reply(self.wiki_pipeline.generate(msg[0]))
-        
-        if message.content.startswith('r!q'):
-            msg = parse.parse('r!q {0}', message.content)
-            await message.reply(embed=self.qna_pipeline.generate(msg[0], message.author))
-        
-        if message.content.startswith('r!def'):
-            msg = parse.parse('r!def {0}', message.content)
-            await message.reply(embed=self.dict_pipeline.generate(msg[0], message.author))
+                if message.content.startswith('r!wiki'):
+                    await self.rate_limiter.pop_call()
+                    msg = parse.parse('r!wiki {0}', message.content)
+                    await message.reply(self.wiki_pipeline.generate(msg[0]))
+                
+                if message.content.startswith('r!q'):
+                    msg = parse.parse('r!q {0}', message.content)
+                    await message.reply(embed=self.qna_pipeline.generate(msg[0], message.author))
+                
+                if message.content.startswith('r!def'):
+                    msg = parse.parse('r!def {0}', message.content)
+                    await message.reply(embed=self.dict_pipeline.generate(msg[0], message.author))
 
-        if message.content.startswith('r!help'):
-            await self.rate_limiter.pop_call()
-            await self.help(message)
+                if message.content.startswith('r!help'):
+                    await self.rate_limiter.pop_call()
+                    await self.help(message)
+            except Exception as e:
+                if message:
+                    embed = Embed(title='Error!', description=f'``{e}``')
+                    embed.set_footer(text=message.author.name + '#' + message.author.discriminator, icon_url=message.author.avatar_url)
+                    await message.reply(embed=embed)
