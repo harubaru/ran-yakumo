@@ -144,10 +144,7 @@ class QnAPipeline(Pipeline):
 class DictionaryPipeline(Pipeline):
     def __init__(self, util=None, keys=None):
         super().__init__(util, keys)
-        try:
-            self.model = GPTJGeneratorService(ip=keys["sukima_ip"], username=keys["sukima_username"], password=keys["sukima_password"])
-        except:
-            self.log("Failed to initialize. Auth timeout.")
+        self.model = GPTJGeneratorService(ip=keys["sukima_ip"], username=keys["sukima_username"], password=keys["sukima_password"])
         self.log("Pipeline Initialized.")
         self.prompt = "world - the earth, together with all of its countries, peoples, and natural features.\nbrain - an organ of soft nervous tissue having a grayish-white surface and a number of minute blood vessels, functioning as the center of the nervous system.\nlinker (programming) - a program that links the source code of a software program into a single executable file.\nintracranial hemorrhaging - the process of bleeding within the brain.\npresident - a person who presides over an organization, usually with the title of chairman.\nsenator - a person who is elected to represent a state in the U.S. Senate.\nvirtual machine - a computer program that emulates the behavior of a real machine.\nhole - a small opening or cavity.\n{term} -"
 
@@ -161,6 +158,27 @@ class DictionaryPipeline(Pipeline):
         embed.description = response
 
         return embed
+
+from context import *
+import datetime
+
+# Conversational Pipeline
+class ConversationalPipeline(Pipeline):
+    def __init__(self, util=None, keys=None):
+        super().__init__(util, keys)
+        self.model = GPTJGeneratorService(ip=keys["sukima_ip"], username=keys["sukima_username"], password=keys["sukima_password"])
+        self.log("Pipeline Initialized.")
+        self.prompt = " [Ran Yakumo is a fluffy nine tailed kitsune who lives with Yukari Yakumo and takes care of Chen.]"
+
+    def generate(self, message):
+        ctxmanager = ContextManager()
+        ctxmanager.add_entry(ContextEntry(text=self.prompt, insertion_order=800, insertion_position=0, forced_activation=True, insertion_type=INSERTION_TYPE_NEWLINE))
+        ctxmanager.add_entry(ContextEntry(text=message, suffix='Ran Yakumo:', reserved_tokens=512, insertion_order=0, trim_direction=TRIM_DIR_TOP, forced_activation=True, cascading_activation=True, insertion_type=INSERTION_TYPE_NEWLINE, insertion_position=-1))
+        ctxmanager.add_entry(ContextEntry(text=f" [The current time is {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]", insertion_position=-10, insertion_order=-400, insertion_type=INSERTION_TYPE_NEWLINE, forced_activation=True))
+        prompt_formatted = ctxmanager.context()
+        response = self.model.sample_sequence_raw(prompt_formatted)
+
+        return response
 
 # Message pipeline for translation tasks.
 class TranslationPipeline(Pipeline):

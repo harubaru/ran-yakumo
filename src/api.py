@@ -4,7 +4,7 @@ import json
 class Sukima_API():
     def __init__(self, ip: str, username: str, password: str): 
         self.ip = ip
-        r = self.post(f'http://{ip}:8080/api/v1/token', data={'username':username,'password':password})
+        r = self.post(f'http://{ip}:8080/api/v1/users/token', data={'username':username,'password':password})
         if r.status_code == 200:
             self.token = r.json()['access_token']
         else:
@@ -14,7 +14,7 @@ class Sukima_API():
         headers = None
         if auth:
             headers = {'Authorization': f'Bearer {auth}'}
-        r = requests.post(url=url, data=data, headers=headers, timeout=5.0)
+        r = requests.post(url=url, data=data, headers=headers, timeout=20.0)
         return r
     
     def get(self, url, auth = None):
@@ -41,7 +41,7 @@ class Sukima_API():
             raise Exception('Unable to fetch models.')
 
     def generate(self, args):
-        r = self.post(f'http://{self.ip}:8080/api/v1/generate', data=json.dumps(args), auth=self.token)
+        r = self.post(f'http://{self.ip}:8080/api/v1/models/generate', data=json.dumps(args), auth=self.token)
         if r.status_code == 200:
             return r.json()['completion']['text'][len(args['prompt']):]
         else:
