@@ -60,7 +60,7 @@ class Client():
         self.log('Connected to Discord Servers.')
     
     async def on_message(self, message):
-        if self.client.user.mentioned_in(message):
+        if self.client.user.mentioned_in(message) or 'ran' in message.content.lower():
             if message.author.id == self.client.user.id:
                 return
             await asyncio.sleep(random.uniform(1.5, 8.0))

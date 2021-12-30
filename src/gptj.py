@@ -21,7 +21,9 @@ class GPTJGeneratorService(GeneratorService):
                                 'bad_words': ['***', "Author's Note", 'Deleted', ' [', ' :', 'https', ' https', 'http', ' http', " I don't know!", '```', '``', ' hole', ' holes', '<', ' <', ' @', '._.', ' ._.'],
                         },
                         'gen_args': {
-                                'max_length': generate_num
+                                'max_length': generate_num,
+                                'min_length': 1,
+                                'eos_token_id': 198
                         }
                 }
 
