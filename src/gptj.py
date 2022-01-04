@@ -1,10 +1,12 @@
 import api
-from gptauto import GeneratorService
 
-class GPTJGeneratorService(GeneratorService):
+class GPTJGeneratorService():
         def __init__(self, generate_num=100, temperature=0.4, tfs=0.993, repetition_penalty=1.25, model_name='c1-6b', stop_sequences=['\n'], ip=None, username=None, password=None):
                 self.stop_sequences = stop_sequences
-                self.api = api.Sukima_API(ip, username, password)
+                try:
+                        self.api = api.Sukima_API(ip, username, password)
+                except:
+                        self.api = None
                 self.args = {
                         'model': model_name,
                         'prompt': '',
@@ -26,6 +28,8 @@ class GPTJGeneratorService(GeneratorService):
                 }
 
         def sample_sequence_raw(self, context):
+                if self.api is None:
+                        raise RuntimeError('Unable to connect to backend.')
                 self.args['prompt'] = context
                 try:
                         text = self.api.generate(self.args)

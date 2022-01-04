@@ -4,7 +4,10 @@ import json
 class Sukima_API():
     def __init__(self, ip: str, username: str, password: str): 
         self.ip = ip
-        r = self.post(f'http://{ip}:8000/api/v1/users/token', data={'username':username,'password':password})
+        try:
+            r = self.post(f'http://{ip}:8000/api/v1/users/token', data={'username':username,'password':password})
+        except Exception as e:
+            raise e
         if r.status_code == 200:
             self.token = r.json()['access_token']
         else:
@@ -14,7 +17,7 @@ class Sukima_API():
         headers = None
         if auth:
             headers = {'Authorization': f'Bearer {auth}'}
-        r = requests.post(url=url, data=data, headers=headers, timeout=20.0)
+        r = requests.post(url=url, data=data, headers=headers, timeout=10.0)
         return r
     
     def get(self, url, auth = None):

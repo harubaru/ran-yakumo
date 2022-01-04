@@ -25,10 +25,10 @@ class Client():
         self.util = util
         self.client = discord.Client()
         self.token = keys["discord_token"]
-        self.conv_pipeline = ConversationalPipeline(self.util, keys)
         self.tl_pipeline = TranslationPipeline(self.util, keys)
         self.qna_pipeline = QnAPipeline(self.util, keys)
         self.dict_pipeline = DictionaryPipeline(self.util, keys)
+        self.conv_pipeline = ConversationalPipeline(self.util, keys)
         self.db_pipeline = DanbooruPipeline(self.util, keys)
         self.yt_pipeline = YoutubePipeline(self.util, keys)
         self.wiki_pipeline = WikipediaPipeline(self.util, keys)
@@ -60,22 +60,28 @@ class Client():
         self.log('Connected to Discord Servers.')
     
     async def on_message(self, message):
-        triggers = [' ran', 'ran ', 'ran.', 'ran?', 'ran!']
-        if self.client.user.mentioned_in(message) or any(trigger in message.content.lower() for trigger in triggers):
-            if message.author.id == self.client.user.id:
+        try:
+            triggers = [' ran', 'ran ', 'ran.', 'ran?', 'ran!']
+            if self.client.user.mentioned_in(message) or any(trigger in message.content.lower() for trigger in triggers):
+                if message.author.id == self.client.user.id:
+                    return
+                await asyncio.sleep(random.uniform(1.5, 8.0))
+                async with message.channel.typing():
+                    msg = ''
+                    messages = await message.channel.history(limit=80).flatten()
+                    for i in reversed(messages):
+                        content = re.sub(r'\<[^>]*\>', '', f'{i.content}')
+                        if content == '':
+                            continue
+                        msg += f'{i.author.name}: {content}\n'
+                await message.channel.send(self.conv_pipeline.generate(msg))
+            if not message.content.startswith('r!'):
                 return
-            await asyncio.sleep(random.uniform(1.5, 8.0))
-            async with message.channel.typing():
-                msg = ''
-                messages = await message.channel.history(limit=80).flatten()
-                for i in reversed(messages):
-                    content = re.sub(r'\<[^>]*\>', '', f'{i.content}')
-                    if content == '':
-                        continue
-                    msg += f'{i.author.name}: {content}\n'
-            await message.channel.send(self.conv_pipeline.generate(msg))
-        if not message.content.startswith('r!'):
-            return
+        except Exception as e:
+            if message:
+                embed = Embed(title='Error!', description=f'``{e}``')
+                embed.set_footer(text=message.author.name + '#' + message.author.discriminator, icon_url=message.author.avatar_url)
+                await message.reply(embed=embed)
         
         self.last_message = message
         
@@ -92,7 +98,14 @@ class Client():
                 await self.rate_limiter.pop_call()
                 return
             else:
-                await self.message_handler(message)
+                try:
+                    await self.message_handler(message)
+                except Exception as e:
+                    if message:
+                        embed = Embed(title='Error!', description=f'``{e}``')
+                        embed.set_footer(text=message.author.name + '#' + message.author.discriminator, icon_url=message.author.avatar_url)
+                        await message.reply(embed=embed)
+
     
     async def send_embed(self, title, message, messageobj):
         embed = discord.Embed(title=title, description=message, colour=0xf1ab37)
@@ -107,7 +120,7 @@ class Client():
             'q': 'Ask a question.\nUsage: ``r!q [question]``',
             'def': 'Look up a word in the dictionary.\nUsage: ``r!def [word]``',
         }
-        msg = "**Ran Yakumo Bot**\nVersion: ``0.1.1``\nGithub repo: [**Come contribute!**](https://github.com/harubaru/ran-yakumo)\n\nCommands:"
+        msg = "**Ran Yakumo Bot**\nVersion: ``0.2.0``\nGithub repo: [**Come contribute!**](https://github.com/harubaru/ran-yakumo)\n\nCommands:"
         for key, value in command_dict.items():
             msg += '\n**{0}** - {1}\n'.format(key, value)
         
@@ -115,42 +128,34 @@ class Client():
         
     async def message_handler(self, message):
         await message.channel.trigger_typing()
-        try:
-            if message.content.startswith('r!t'):
-                msg = parse.parse('r!tl {0} {1} {2}', message.content.replace('\n', ''))
-                from_lang = msg[0]
-                to_lang = msg[1]
-                text = msg[2]
-                await message.reply(self.tl_pipeline.generate(text, from_lang, to_lang))
-            
-            # danbooru
-            if message.content.startswith('r!dan'):
-                await self.rate_limiter.pop_call()
-                msg = parse.parse('r!dan {0}', message.content.replace('\n', ''))
-                await message.reply(embed=self.db_pipeline.generate(msg[0], message.channel.is_nsfw(), message.author))
-            
-            if message.content.startswith('r!yt'):
-                msg = parse.parse('r!yt {0}', message.content)
-                await message.reply(self.yt_pipeline.generate(msg[0]))
+        if message.content.startswith('r!tl'):
+            msg = parse.parse('r!tl {0} {1}', message.content)
+            to_lang = msg[0]
+            text = msg[1]
+            await message.reply(embed=self.tl_pipeline.generate(text, to_lang, message.author))
+        
+        if message.content.startswith('r!d '):
+            await self.rate_limiter.pop_call()
+            msg = parse.parse('r!d {0}', message.content.replace('\n', ''))
+            await message.reply(embed=self.db_pipeline.generate(msg[0], message.channel.is_nsfw(), message.author))
+        
+        if message.content.startswith('r!yt'):
+            msg = parse.parse('r!yt {0}', message.content)
+            await message.reply(self.yt_pipeline.generate(msg[0]))
 
-            if message.content.startswith('r!wiki'):
-                await self.rate_limiter.pop_call()
-                msg = parse.parse('r!wiki {0}', message.content)
-                await message.reply(self.wiki_pipeline.generate(msg[0]))
-            
-            if message.content.startswith('r!q'):
-                msg = parse.parse('r!q {0}', message.content)
-                await message.reply(embed=self.qna_pipeline.generate(msg[0], message.author))
-            
-            if message.content.startswith('r!def'):
-                msg = parse.parse('r!def {0}', message.content)
-                await message.reply(embed=self.dict_pipeline.generate(msg[0], message.author))
+        if message.content.startswith('r!wiki'):
+            await self.rate_limiter.pop_call()
+            msg = parse.parse('r!wiki {0}', message.content)
+            await message.reply(self.wiki_pipeline.generate(msg[0]))
+        
+        if message.content.startswith('r!q'):
+            msg = parse.parse('r!q {0}', message.content)
+            await message.reply(embed=self.qna_pipeline.generate(msg[0], message.author))
+        
+        if message.content.startswith('r!def'):
+            msg = parse.parse('r!def {0}', message.content)
+            await message.reply(embed=self.dict_pipeline.generate(msg[0], message.author))
 
-            if message.content.startswith('r!help'):
-                await self.rate_limiter.pop_call()
-                await self.help(message)
-        except Exception as e:
-            if message:
-                embed = Embed(title='Error!', description=f'``{e}``')
-                embed.set_footer(text=message.author.name + '#' + message.author.discriminator, icon_url=message.author.avatar_url)
-                await message.reply(embed=embed)
+        if message.content.startswith('r!help'):
+            await self.rate_limiter.pop_call()
+            await self.help(message)

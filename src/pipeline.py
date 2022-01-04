@@ -19,7 +19,6 @@ class Pipeline():
 
 import wikipedia
 from youtube_search import YoutubeSearch
-from gpt3search import SearchService
 
 class WikipediaPipeline(Pipeline):
     def __init__(self, util=None, keys=None):
@@ -48,23 +47,17 @@ class WikipediaPipeline(Pipeline):
 class YoutubePipeline(Pipeline):
     def __init__(self, util=None, keys=None):
         super().__init__(util, keys)
-        self.service = SearchService(api_key=keys["openai_token"])
         self.log("Pipeline Initialized.")
 
     def generate(self, message):
         if not message:
             return "Please specify a search term."
         
-        results = YoutubeSearch(message, max_results=8)
+        results = YoutubeSearch(message, max_results=1)
         if not results:
             return 'Could not find YouTube video.'
         
-        search_query = []
-        for i in results.videos:
-            search_query.append(i['title'])
-        
-        selection = self.service.classify_sequence(message, search_query)
-        return 'https://www.youtube.com' + results.videos[selection]['url_suffix']
+        return 'https://www.youtube.com' + results.videos[1]['url_suffix']
 
 from pybooru import Danbooru
 
@@ -115,16 +108,12 @@ class DanbooruPipeline(Pipeline):
 
 
 from gptj import GPTJGeneratorService
-from gpt3 import GPT3GeneratorService
 
 # Q&A Pipeline
 class QnAPipeline(Pipeline):
     def __init__(self, util=None, keys=None):
         super().__init__(util, keys)
-        try:
-            self.model = GPTJGeneratorService(ip=keys["sukima_ip"], username=keys["sukima_username"], password=keys["sukima_password"])
-        except:
-            self.log("Failed to initialize. Auth timeout.")
+        self.model = GPTJGeneratorService(ip=keys["sukima_ip"], username=keys["sukima_username"], password=keys["sukima_password"])
         self.log("Pipeline Initialized.")
         self.prompt = "{author}: How does a telescope work?\nRan Yakumo: Telescopes use lenses or mirrors to focus light and make objects appear closer.\n{author}: {question}\nRan Yakumo:"
     
@@ -180,13 +169,14 @@ class ConversationalPipeline(Pipeline):
 
         return response
 
+from google.cloud import translate_v2 as translate
+
 # Message pipeline for translation tasks.
 class TranslationPipeline(Pipeline):
 
     def __init__(self, util=None, keys=None):
         super().__init__(util, keys)
-        self.model = GPT3GeneratorService(generate_num=32, temperature=0.33, model_name='davinci', api_key=keys["openai_token"])
-        self.prompt = "This is a translation from {from_lang} to {to_lang}.\n{from_lang}: {message}\n{to_lang}:"
+        self.translate_client = translate.Client()
         self.tl_configurations = {
             'ja': 'Japanese',
             'en': 'English',
@@ -206,22 +196,17 @@ class TranslationPipeline(Pipeline):
             'hi': 'Hindi',
             'id': 'Indonesian'
         }
-
         self.log("Pipeline initialized.")
     
-    def generate(self, message, from_lang, to_lang):
-        # log from language and to language
-
-        if from_lang not in self.tl_configurations:
-            return "Invalid language code."
+    def generate(self, message, to_lang, author):
         if to_lang not in self.tl_configurations:
-            return "Invalid language code."
+            return discord.Embed(description="Invalid target language code.")
         
-        prompt_formatted = self.prompt.format(from_lang=self.tl_configurations[from_lang], to_lang=self.tl_configurations[to_lang], message=message)
-        prompt_formatted = prompt_formatted[0:400] # 400 character limit
-        response = self.model.sample_sequence_raw(prompt_formatted)
+        result = self.translate_client.translate(message, target_language=to_lang)
+        embed = discord.Embed()
+        embed.set_footer(text=author.name + '#' + author.discriminator, icon_url=author.avatar_url)
+        embed.colour = embed_color
+        embed.description = f'```{result["translatedText"]}```'
+        embed.title = f'{self.tl_configurations[result["detectedSourceLanguage"]]} to {self.tl_configurations[to_lang]}'
 
-        if response == '':
-            response = 'Unable to translate.'
-
-        return response
+        return embed
