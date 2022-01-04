@@ -3,10 +3,9 @@ import api
 class GPTJGeneratorService():
         def __init__(self, generate_num=100, temperature=0.4, tfs=0.993, repetition_penalty=1.25, model_name='c1-6b', stop_sequences=['\n'], ip=None, username=None, password=None):
                 self.stop_sequences = stop_sequences
-                try:
-                        self.api = api.Sukima_API(ip, username, password)
-                except:
-                        self.api = None
+                self.username = username
+                self.password = password
+                self.api = api.Sukima_API(ip, username, password)
                 self.args = {
                         'model': model_name,
                         'prompt': '',
@@ -28,8 +27,11 @@ class GPTJGeneratorService():
                 }
 
         def sample_sequence_raw(self, context):
-                if self.api is None:
-                        raise RuntimeError('Unable to connect to backend.')
+                if self.api.token is None:
+                        try:
+                                self.api.auth(self.username, self.password)
+                        except:
+                                raise RuntimeError('Unable to connect to backend.')
                 self.args['prompt'] = context
                 try:
                         text = self.api.generate(self.args)
