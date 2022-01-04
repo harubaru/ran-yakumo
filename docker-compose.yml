@@ -7,9 +7,13 @@ services:
         command: python src/entrypoint.py
         environment:
             SECRETS_PATH: /var/run/secrets/secrets_file
+            GOOGLE_APPLICATION_CREDENTIALS: /var/run/secrets/gcp_credentials
         secrets:
             - secrets_file
+            - gcp_credentials
 
 secrets:
     secrets_file:
         file: ./secrets.json
+    gcp_credentials:
+        file: ./gcp_credentials.json
