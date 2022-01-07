@@ -70,11 +70,19 @@ class Client():
                     msg = ''
                     messages = await message.channel.history(limit=80).flatten()
                     for i in reversed(messages):
-                        content = re.sub(r'\<[^>]*\>', '', f'{i.content}')
-                        if content == '':
-                            continue
-                        msg += f'{i.author.name}: {content}\n'
-                await message.channel.send(self.conv_pipeline.generate(msg))
+                        if not i.embeds and i.content:
+                            content = re.sub(r'\<[^>]*\>', '', f'{i.content}')
+                            if content == '':
+                                continue
+                            msg += f'{i.author.name}: {content}\n'
+                        elif i.embeds:
+                            content = i.embeds[0].description
+                            if content == '':
+                                continue
+                            msg += f'{i.author.name}: [Embed: {content}]\n'
+                        elif i.attachments:
+                            msg += f'{i.author.name}: [Image attached]\n'
+                    await message.channel.send(self.conv_pipeline.generate(msg))
             if not message.content.startswith('r!'):
                 return
         except Exception as e:
