@@ -61,7 +61,7 @@ class Client():
     
     async def on_message(self, message):
         try:
-            triggers = [' ran', 'ran ', 'ran.', 'ran?', 'ran!']
+            triggers = [' ran', 'ran ', 'ran.', 'ran?', 'ran!', ' ran,']
             if self.client.user.mentioned_in(message) or any(trigger in message.content.lower() for trigger in triggers):
                 if message.author.id == self.client.user.id:
                     return
