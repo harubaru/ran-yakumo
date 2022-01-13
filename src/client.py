@@ -61,28 +61,14 @@ class Client():
     
     async def on_message(self, message):
         try:
-            triggers = [' ran', 'ran ', 'ran.', 'ran?', 'ran!', ' ran,']
-            if self.client.user.mentioned_in(message) or any(trigger in message.content.lower() for trigger in triggers):
-                if message.author.id == self.client.user.id:
-                    return
-                await asyncio.sleep(random.uniform(1.5, 8.0))
+            if message.author.id == self.client.user.id:
+                return
+            response = await self.conv_pipeline.respond(message, self.client.user.mentioned_in(message))
+            if response != None:
+                print(response)
                 async with message.channel.typing():
-                    msg = ''
-                    messages = await message.channel.history(limit=80).flatten()
-                    for i in reversed(messages):
-                        if not i.embeds and i.content:
-                            content = re.sub(r'\<[^>]*\>', '', f'{i.content}')
-                            if content == '':
-                                continue
-                            msg += f'{i.author.name}: {content}\n'
-                        elif i.embeds:
-                            content = i.embeds[0].description
-                            if content == '':
-                                continue
-                            msg += f'{i.author.name}: [Embed: {content}]\n'
-                        elif i.attachments:
-                            msg += f'{i.author.name}: [Image attached]\n'
-                    await message.channel.send(self.conv_pipeline.generate(msg))
+                    await asyncio.sleep(random.uniform(1.5, 8.0))
+                    await message.channel.send(response)
             if not message.content.startswith('r!'):
                 return
         except Exception as e:

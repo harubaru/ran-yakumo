@@ -52,6 +52,6 @@ class Sukima_API():
     def generate(self, args):
         r = self.post(f'http://{self.ip}:8000/api/v1/models/generate', data=json.dumps(args), auth=self.token)
         if r.status_code == 200:
-            return r.json()['completion']['text'][len(args['prompt']):]
+            return r.json()['output'][len(args['prompt']):]
         else:
             raise Exception('Unable to generate text.', r.json())

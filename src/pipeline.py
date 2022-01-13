@@ -158,16 +158,54 @@ class ConversationalPipeline(Pipeline):
         self.model = GPTJGeneratorService(ip=keys["sukima_ip"], username=keys["sukima_username"], password=keys["sukima_password"])
         self.log("Pipeline Initialized.")
         self.prompt = " [Ran Yakumo is a fluffy nine tailed kitsune who lives with Yukari Yakumo and takes care of Chen.]"
+        self.name = 'Ran Yakumo'
 
     def generate(self, message):
         ctxmanager = ContextManager()
         ctxmanager.add_entry(ContextEntry(text=self.prompt, insertion_order=800, insertion_position=0, forced_activation=True, insertion_type=INSERTION_TYPE_NEWLINE))
-        ctxmanager.add_entry(ContextEntry(text=message, suffix='Ran Yakumo:', reserved_tokens=512, insertion_order=0, trim_direction=TRIM_DIR_TOP, forced_activation=True, cascading_activation=True, insertion_type=INSERTION_TYPE_NEWLINE, insertion_position=-1))
+        ctxmanager.add_entry(ContextEntry(text=message, suffix=f'{self.name}:', reserved_tokens=512, insertion_order=0, trim_direction=TRIM_DIR_TOP, forced_activation=True, cascading_activation=True, insertion_type=INSERTION_TYPE_NEWLINE, insertion_position=-1))
         ctxmanager.add_entry(ContextEntry(text=f" [The current time is {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]", insertion_position=-10, insertion_order=-400, insertion_type=INSERTION_TYPE_NEWLINE, forced_activation=True))
         prompt_formatted = ctxmanager.context()
         response = self.model.sample_sequence_raw(prompt_formatted)
 
         return response
+    
+    async def respond(self, message, forced):
+        messages = await message.channel.history(limit=80).flatten()
+        msg = ''
+        for i in reversed(messages):
+            if not i.embeds and i.content:
+                content = re.sub(r'\<[^>]*\>', '', f'{i.content}')
+                if content == '':
+                    continue
+                msg += f'{i.author.name}: {content}\n'
+            elif i.embeds:
+                content = i.embeds[0].description
+                if content == '':
+                    continue
+                msg += f'{i.author.name}: [Embed: {content}]\n'
+            elif i.attachments:
+                msg += f'{i.author.name}: [Image attached]\n'
+        
+        ctxmanager = ContextManager()
+        ctxmanager.add_entry(ContextEntry(text=self.prompt, insertion_order=800, insertion_position=0, forced_activation=True, insertion_type=INSERTION_TYPE_NEWLINE))
+        ctxmanager.add_entry(ContextEntry(text=msg, suffix='\n', reserved_tokens=512, insertion_order=0, trim_direction=TRIM_DIR_TOP, forced_activation=True, cascading_activation=True, insertion_type=INSERTION_TYPE_NEWLINE, insertion_position=-1))
+        ctxmanager.add_entry(ContextEntry(text=f" [The current time is {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]", insertion_position=-10, insertion_order=-400, insertion_type=INSERTION_TYPE_NEWLINE, forced_activation=True))
+        prompt_formatted = ctxmanager.context()
+        self.model.args['gen_args']['eos_token_id'] = 25
+        self.model.args['sample_args']['temp'] = 0.25
+        self.model.args['sample_args']['phrase_biases'] = [{'sequences':[self.name], 'bias':0.5, 'ensure_sequence_finish':True, 'generate_once':True}]
+        response = self.model.sample_sequence_raw(prompt_formatted)
+        self.model.args['sample_args']['temp'] = 0.4
+        self.model.args['sample_args']['phrase_biases'] = None
+        self.model.args['gen_args']['eos_token_id'] = 198
+        print(prompt_formatted, '\n===')
+        print(response)
+        if response.startswith(self.name) or forced:
+            return self.generate(msg)
+        return None
+
+        
 
 from google.cloud import translate_v2 as translate
 

@@ -1,7 +1,7 @@
 import api
 
 class GPTJGeneratorService():
-        def __init__(self, generate_num=100, temperature=0.4, tfs=0.993, repetition_penalty=1.25, model_name='c1-6b', stop_sequences=['\n'], ip=None, username=None, password=None):
+        def __init__(self, generate_num=100, temperature=0.4, tfs=0.993, repetition_penalty=1.33, model_name='c1-6b', stop_sequences=['\n'], ip=None, username=None, password=None):
                 self.stop_sequences = stop_sequences
                 self.username = username
                 self.password = password
@@ -17,7 +17,7 @@ class GPTJGeneratorService():
                                 'rep_p': repetition_penalty,
                                 'rep_p_range': 1024,
                                 'rep_p_slope': 0.18,
-                                'bad_words': ['***', "Author's Note", 'Deleted', ' [', ' :', 'https', ' https', 'http', ' http', " I don't know!", '```', '``', ' hole', ' holes', '<', ' <', ' @', '._.', ' ._.', ' .'],
+                                'bad_words': ['***', "Author's Note", 'Deleted', ' [', ' :', 'https', ' https', 'http', ' http', " I don't know!", '```', '``', ' hole', ' holes', '<', ' <', ' @', '._.', ' ._.', ' .', '...', ' ...', '..', ' ..'],
                         },
                         'gen_args': {
                                 'max_length': generate_num+20,
