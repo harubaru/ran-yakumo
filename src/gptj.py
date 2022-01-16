@@ -17,7 +17,7 @@ class GPTJGeneratorService():
                                 'rep_p': repetition_penalty,
                                 'rep_p_range': 1024,
                                 'rep_p_slope': 0.18,
-                                'bad_words': ['***', "Author's Note", 'Deleted', ' [', ' :', 'https', ' https', 'http', ' http', " I don't know!", '```', '``', ' hole', ' holes', '<', ' <', ' @', '._.', ' ._.', ' .', '...', ' ...', '..', ' ..'],
+                                'bad_words': ['***', "Author's Note", 'Deleted', ' [', ' :', 'https', ' https', 'http', ' http', " I don't know!", '```', '``', ' hole', ' holes', '<', ' <', ' @', '._.', ' ._.', ' .', '...', ' ...', '..', ' ..', ' {', '{'],
                         },
                         'gen_args': {
                                 'max_length': generate_num+20,

@@ -157,8 +157,9 @@ class ConversationalPipeline(Pipeline):
         super().__init__(util, keys)
         self.model = GPTJGeneratorService(ip=keys["sukima_ip"], username=keys["sukima_username"], password=keys["sukima_password"])
         self.log("Pipeline Initialized.")
-        self.prompt = " [Ran Yakumo is a fluffy nine tailed kitsune who lives with Yukari Yakumo and takes care of Chen.]"
+        self.prompt = " [Ran Yakumo is kitsune and shikigami of Yukari. She is peaceful and gentle. Her shikigami is Chen who loves spending her time with Ran. She performs domestic duties for Yukari and does maintenance on Great Hakurei Barrier. Ran has short blonde hair and nine fox tails.]"
         self.name = 'Ran Yakumo'
+        self.debounce = False
 
     def generate(self, message):
         ctxmanager = ContextManager()
@@ -170,7 +171,7 @@ class ConversationalPipeline(Pipeline):
 
         return response
     
-    async def respond(self, message, forced):
+    async def get_msg_ctx(self, message):
         messages = await message.channel.history(limit=80).flatten()
         msg = ''
         for i in reversed(messages):
@@ -186,7 +187,23 @@ class ConversationalPipeline(Pipeline):
                 msg += f'{i.author.name}: [Embed: {content}]\n'
             elif i.attachments:
                 msg += f'{i.author.name}: [Image attached]\n'
-        
+        return msg
+
+    async def autocomplete(self, message):
+        msg = await self.get_msg_ctx(message)
+        ctxmanager = ContextManager()
+        ctxmanager.add_entry(ContextEntry(text=msg, suffix=f'{message.author.name}:', reserved_tokens=512, insertion_order=0, trim_direction=TRIM_DIR_TOP, forced_activation=True, cascading_activation=True, insertion_type=INSERTION_TYPE_NEWLINE, insertion_position=-1))
+        ctxmanager.add_entry(ContextEntry(text=f" [The current time is {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]", insertion_position=-10, insertion_order=-400, insertion_type=INSERTION_TYPE_NEWLINE, forced_activation=True))
+        prompt_formatted = ctxmanager.context()
+        response = self.model.sample_sequence_raw(prompt_formatted)
+        return response
+
+    async def respond(self, message, forced):
+        if self.debounce == True:
+            return None
+        else:
+            self.debounce = True
+        msg = await self.get_msg_ctx(message)
         ctxmanager = ContextManager()
         ctxmanager.add_entry(ContextEntry(text=self.prompt, insertion_order=800, insertion_position=0, forced_activation=True, insertion_type=INSERTION_TYPE_NEWLINE))
         ctxmanager.add_entry(ContextEntry(text=msg, suffix='\n', reserved_tokens=512, insertion_order=0, trim_direction=TRIM_DIR_TOP, forced_activation=True, cascading_activation=True, insertion_type=INSERTION_TYPE_NEWLINE, insertion_position=-1))
@@ -194,15 +211,19 @@ class ConversationalPipeline(Pipeline):
         prompt_formatted = ctxmanager.context()
         self.model.args['gen_args']['eos_token_id'] = 25
         self.model.args['sample_args']['temp'] = 0.25
-        self.model.args['sample_args']['phrase_biases'] = [{'sequences':[self.name], 'bias':0.5, 'ensure_sequence_finish':True, 'generate_once':True}]
+        self.model.args['sample_args']['phrase_biases'] = [{'sequences':[self.name], 'bias':1.2, 'ensure_sequence_finish':True, 'generate_once':True}]
         response = self.model.sample_sequence_raw(prompt_formatted)
         self.model.args['sample_args']['temp'] = 0.4
         self.model.args['sample_args']['phrase_biases'] = None
         self.model.args['gen_args']['eos_token_id'] = 198
         print(prompt_formatted, '\n===')
         print(response)
+        returned = None
         if response.startswith(self.name) or forced:
-            return self.generate(msg)
+            returned = self.generate(msg)
+            self.debounce = False
+            return returned
+        self.debounce = False
         return None
 
         

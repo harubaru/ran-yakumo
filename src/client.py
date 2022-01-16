@@ -4,12 +4,14 @@ import discord
 import re
 import asyncio
 import random
+import aiohttp
 
 from ratelimiter import AsyncRateLimiter
 from util import Util
 from discord import Embed
 from discord import Colour
 from discord import channel
+from discord import Webhook, AsyncWebhookAdapter
 
 # Import the pipelines
 from pipeline import ConversationalPipeline
@@ -32,6 +34,7 @@ class Client():
         self.db_pipeline = DanbooruPipeline(self.util, keys)
         self.yt_pipeline = YoutubePipeline(self.util, keys)
         self.wiki_pipeline = WikipediaPipeline(self.util, keys)
+        self.webhook_url = keys["webhook_url"]
         self.last_message = None
         self.until = None
         self.rate_limited = False
@@ -63,7 +66,9 @@ class Client():
         try:
             if message.author.id == self.client.user.id:
                 return
-            response = await self.conv_pipeline.respond(message, self.client.user.mentioned_in(message))
+            response = None
+            if not message.content.startswith('r!'):
+                response = await self.conv_pipeline.respond(message, self.client.user.mentioned_in(message) or any(t in message.content.lower() for t in [' ran', 'ran ']))
             if response != None:
                 print(response)
                 async with message.channel.typing():
@@ -149,6 +154,12 @@ class Client():
         if message.content.startswith('r!def'):
             msg = parse.parse('r!def {0}', message.content)
             await message.reply(embed=self.dict_pipeline.generate(msg[0], message.author))
+
+        if message.content.startswith('r!auto'):
+            async with aiohttp.ClientSession() as session:
+                await message.delete()
+                webhook = Webhook.from_url(self.webhook_url, adapter=AsyncWebhookAdapter(session))
+                await webhook.send(await self.conv_pipeline.autocomplete(message), username=message.author.name, avatar_url=message.author.avatar_url)
 
         if message.content.startswith('r!help'):
             await self.rate_limiter.pop_call()
