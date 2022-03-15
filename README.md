@@ -1,5 +1,8 @@
 ![logo](banner.png)
 
+# This repo is outdated! Please checkout my more general framework here:
+https://github.com/harubaru/eliza
+
 ## Overview
 Ran Yakumo is a general information utility bot powered by [Sukima](https://github.com/hitomi-team/sukima) which uses GPT-J to power various functions!
 
